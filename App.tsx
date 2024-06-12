@@ -1,102 +1,89 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, { useEffect } from 'react';
 import {
+  Alert,
+  Button,
+  NativeEventEmitter,
   SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from 'react-native';
 
 import {
   Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
-
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+import { NativeModules } from 'react-native';
 
 function App(): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
+  const { CustomModule } = NativeModules;
+  const testCreateCustomNativeEvent = () => {
+    CustomModule.createCustomNativeEvent('Hi there', 'testLocation');
+  }
+
+  const testCustomEventWithCallBack = () => {
+    CustomModule.customEventWithCallback("With Callback", 'location2', (eventId: number) => { Alert.alert(`Callback with ${eventId} invoked`) })
+  }
+
+  const testCustomEventWithPromise = async (shouldResolve: boolean) => {
+    try {
+      const eventId = await CustomModule.customEventWithPromise(shouldResolve, 'location4')
+      Alert.alert('Success', `Promise with eventId ${eventId} was resolved`);
+    } catch (error) {
+      Alert.alert("Error", `Promise was rejected`)
+      console.log('error===', error);
+    }
+  }
+
+  const testCustomNativeListener = () => {
+    CustomModule.sendEvent("some event")
+  }
+
+  useEffect(() => {
+    const eventEmitter = new NativeEventEmitter(CustomModule);
+    const eventListener = eventEmitter.addListener('EventReminder', (event) => {
+      console.log(event) // "someValue"
+      Alert.alert("Event Received", JSON.stringify(event))
+    });
+    return () => {
+      eventListener?.remove();
+    }
+  }, [])
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
+    <SafeAreaView style={styles.backgroundStyle}>
+      <Text style={styles.sectionTitle}>Native modules Demo</Text>
+      <View style={styles.buttonsBox}>
+        <Button
+          title='Test Custom Native Event'
+          onPress={testCreateCustomNativeEvent}
+        />
+        <Button
+          title='Test Custom Native Event With CallBack'
+          onPress={testCustomEventWithCallBack}
+        />
+        <Button
+          title='Test Custom Native Event Promiss Resolve'
+          onPress={() => testCustomEventWithPromise(true)}
+        />
+        <Button
+          title='Test Custom Native Event Promiss Reject'
+          onPress={() => testCustomEventWithPromise(false)}
+        />
+        <Button
+          title='Test Custom Native listener'
+          onPress={testCustomNativeListener}
+        />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  backgroundStyle: {
+    backgroundColor: Colors.darker,
+    flex:1
+  },
   sectionContainer: {
     marginTop: 32,
     paddingHorizontal: 24,
@@ -104,6 +91,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     fontWeight: '600',
+    color: '#fff',
+    alignSelf: 'center'
+  },
+  buttonsBox:{
+    flex:1,
+    justifyContent:'center'
   },
   sectionDescription: {
     marginTop: 8,
